@@ -1,7 +1,7 @@
 {
   "name": "napcat-plugin-zanwo",
   "plugin": "赞我",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "main": "index.mjs",
   "description": "一键点赞插件，支持 .zanwo 和 .zan 命令",
