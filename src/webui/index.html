@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>赞我 · 配置</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f4f4f5;
+      --card: #ffffff;
+      --border: #e4e4e7;
+      --text: #18181b;
+      --muted: #71717a;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --danger: #ef4444;
+      --radius: 8px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #09090b;
+        --card: #18181b;
+        --border: #27272a;
+        --text: #fafafa;
+        --muted: #71717a;
+        --accent: #3b82f6;
+        --accent-hover: #60a5fa;
+        --danger: #f87171;
+      }
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 20px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    h1 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+
+    .card-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      margin-bottom: 10px;
+    }
+
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      min-height: 28px;
+      margin-bottom: 10px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .tag-remove {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--danger);
+      font-size: 15px;
+      line-height: 1;
+      padding: 0 1px;
+      opacity: .7;
+      transition: opacity .1s;
+    }
+
+    .tag-remove:hover { opacity: 1; }
+
+    .empty { color: var(--muted); font-size: 13px; }
+
+    .row {
+      display: flex;
+      gap: 8px;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 13px;
+      outline: none;
+      transition: border-color .15s;
+    }
+
+    input[type="text"]:focus { border-color: var(--accent); }
+
+    .btn {
+      padding: 6px 14px;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      background: var(--accent);
+      color: #fff;
+      transition: background .15s;
+      white-space: nowrap;
+    }
+
+    .btn:hover { background: var(--accent-hover); }
+
+    #status {
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--muted);
+      height: 18px;
+      transition: color .15s;
+    }
+
+    #status.error { color: var(--danger); }
+  </style>
+</head>
+<body>
+  <h1>赞我 · 黑名单配置</h1>
+
+  <div class="card">
+    <div class="card-title">屏蔽群</div>
+    <div class="tags" id="groups-tags"></div>
+    <div class="row">
+      <input id="group-input" type="text" placeholder="输入群号" />
+      <button class="btn" id="add-group-btn">添加</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">屏蔽用户</div>
+    <div class="tags" id="users-tags"></div>
+    <div class="row">
+      <input id="user-input" type="text" placeholder="输入 QQ 号" />
+      <button class="btn" id="add-user-btn">添加</button>
+    </div>
+  </div>
+
+  <div id="status"></div>
+
+  <script>
+    // Derive API base from the current page URL:
+    // page is at /plugin/<pluginId>/page/config
+    // api  is at /plugin/<pluginId>/api/<path>
+    const pluginId = location.pathname.split('/')[2];
+    const apiBase = '/plugin/' + pluginId + '/api';
+
+    let cfg = { blockedGroups: [], blockedUsers: [] };
+
+    // ── API ──────────────────────────────────────────────
+
+    async function load() {
+      try {
+        const r = await fetch(apiBase + '/config');
+        const j = await r.json();
+        if (j.code === 0) { cfg = j.data; render(); }
+        else setStatus('加载失败: ' + (j.message || r.status), true);
+      } catch (e) {
+        setStatus('加载失败: ' + e.message, true);
+      }
+    }
+
+    async function save() {
+      try {
+        const r = await fetch(apiBase + '/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(cfg),
+        });
+        const j = await r.json();
+        if (j.code === 0) setStatus('已保存');
+        else setStatus('保存失败: ' + (j.message || r.status), true);
+      } catch (e) {
+        setStatus('保存失败: ' + e.message, true);
+      }
+    }
+
+    // ── Render ───────────────────────────────────────────
+
+    function render() {
+      renderTags('groups-tags', cfg.blockedGroups, removeGroup);
+      renderTags('users-tags', cfg.blockedUsers, removeUser);
+    }
+
+    function renderTags(id, items, onRemove) {
+      const el = document.getElementById(id);
+      el.innerHTML = '';
+      if (!items.length) {
+        el.innerHTML = '<span class="empty">暂无</span>';
+        return;
+      }
+      items.forEach((item, i) => {
+        const tag = document.createElement('span');
+        tag.className = 'tag';
+        tag.appendChild(document.createTextNode(item));
+        const btn = document.createElement('button');
+        btn.className = 'tag-remove';
+        btn.textContent = '×';
+        btn.title = '移除';
+        btn.onclick = () => onRemove(i);
+        tag.appendChild(btn);
+        el.appendChild(tag);
+      });
+    }
+
+    // ── Mutations ────────────────────────────────────────
+
+    function removeGroup(i) {
+      cfg.blockedGroups.splice(i, 1);
+      render(); save();
+    }
+
+    function removeUser(i) {
+      cfg.blockedUsers.splice(i, 1);
+      render(); save();
+    }
+
+    function addItem(inputId, list) {
+      const input = document.getElementById(inputId);
+      const val = input.value.trim();
+      if (!val || !/^\d+$/.test(val)) { input.focus(); return; }
+      if (!list.includes(val)) { list.push(val); render(); save(); }
+      input.value = '';
+      input.focus();
+    }
+
+    // ── Wire up ──────────────────────────────────────────
+
+    document.getElementById('add-group-btn').onclick = () => addItem('group-input', cfg.blockedGroups);
+    document.getElementById('add-user-btn').onclick  = () => addItem('user-input',  cfg.blockedUsers);
+
+    document.getElementById('group-input').addEventListener('keydown', e => { if (e.key === 'Enter') addItem('group-input', cfg.blockedGroups); });
+    document.getElementById('user-input').addEventListener('keydown',  e => { if (e.key === 'Enter') addItem('user-input',  cfg.blockedUsers); });
+
+    // ── Status ───────────────────────────────────────────
+
+    let statusTimer;
+    function setStatus(msg, isError) {
+      const el = document.getElementById('status');
+      el.textContent = msg;
+      el.className = isError ? 'error' : '';
+      clearTimeout(statusTimer);
+      if (!isError) statusTimer = setTimeout(() => { el.textContent = ''; }, 2000);
+    }
+
+    load();
+  </script>
+</body>
+</html>
