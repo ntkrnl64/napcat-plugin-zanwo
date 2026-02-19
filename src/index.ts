@@ -1,7 +1,6 @@
 import fs from 'fs';
 import path from 'path';
 import type { PluginModule, NapCatPluginContext } from 'napcat-types/napcat-onebot/network/plugin/types';
-import type { OB11Message, OB11PostSendMsg } from 'napcat-types/napcat-onebot';
 import { EventType } from 'napcat-types/napcat-onebot/event/index';
 
 interface Config {
@@ -106,7 +105,6 @@ export const plugin_onmessage: PluginModule['plugin_onmessage'] = async (ctx, ev
     if (cmd === '.zanwo') {
         const n = clamp(parseInt(parts[1] ?? '') || 10, 1, 20);
         const ok = await sendLike(ctx, String(event.user_id), n);
-        await reply(ctx, event, ok ? `已为你点赞 ${n} 次！` : '点赞失败（频率过快或用户不存在）');
 
     } else if (cmd === '.zan') {
         let target: string;
@@ -119,12 +117,9 @@ export const plugin_onmessage: PluginModule['plugin_onmessage'] = async (ctx, ev
             target = parts[1];
             n = clamp(parseInt(parts[2] ?? '') || 1, 1, 20);
         } else {
-            await reply(ctx, event, '用法：.zan @用户 [次数] 或 .zan QQ号 [次数]');
             return;
         }
-
         const ok = await sendLike(ctx, target, n);
-        await reply(ctx, event, ok ? `已为 ${target} 点赞 ${n} 次！` : '点赞失败（频率过快或用户不存在）');
     }
 };
 
@@ -140,22 +135,6 @@ async function sendLike(ctx: NapCatPluginContext, userId: string, times: number)
         );
         return true;
     } catch (e) {
-        ctx.logger.warn(`send_like 失败: userId=${userId}, times=${times}`, e);
         return false;
-    }
-}
-
-async function reply(ctx: NapCatPluginContext, event: OB11Message, text: string): Promise<void> {
-    try {
-        const params: OB11PostSendMsg = {
-            message: text,
-            message_type: event.message_type,
-            ...(event.message_type === 'group' && event.group_id
-                ? { group_id: String(event.group_id) }
-                : { user_id: String(event.user_id) }),
-        };
-        await ctx.actions.call('send_msg', params, ctx.adapterName, ctx.pluginManager.config);
-    } catch (e) {
-        ctx.logger.warn('回复消息失败:', e);
     }
 }

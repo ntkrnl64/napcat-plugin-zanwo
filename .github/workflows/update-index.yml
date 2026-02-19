@@ -13,6 +13,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 env:
   # ⚡ 目标索引仓库（NapNeko 组织下的插件索引）
